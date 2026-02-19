@@ -1,90 +1,86 @@
-# Welcome to your Convex functions directory!
+# Tea Base — Convex Seed Kit
 
-Write your Convex functions here.
-See https://docs.convex.dev/functions for more.
+## What's included
 
-A query function that takes two arguments looks like:
+| File | What it does | Where to put it |
+|------|-------------|-----------------|
+| `schema.ts` | Defines your database tables (teas, users, collections) | `convex/schema.ts` |
+| `seedTeas.ts` | Inserts all 28 teas with photo URLs into the database | `convex/seedTeas.ts` |
+| `teas.ts` | Queries for your frontend (list, filter, search, detail) | `convex/teas.ts` |
 
-```ts
-// convex/myFunctions.ts
-import { query } from "./_generated/server";
-import { v } from "convex/values";
+## Step-by-step
 
-export const myQueryFunction = query({
-  // Validators for arguments.
-  args: {
-    first: v.number(),
-    second: v.string(),
-  },
+### 1. Copy files into your project
 
-  // Function implementation.
-  handler: async (ctx, args) => {
-    // Read the database as many times as you need here.
-    // See https://docs.convex.dev/database/reading-data.
-    const documents = await ctx.db.query("tablename").collect();
+```bash
+cd ~/Desktop/tea-base/tea-base   # your nested project folder
 
-    // Arguments passed from the client are properties of the args object.
-    console.log(args.first, args.second);
+# Back up existing schema if you have one
+cp convex/schema.ts convex/schema.ts.bak 2>/dev/null
 
-    // Write arbitrary JavaScript here: filter, aggregate, build derived data,
-    // remove non-public properties, or create new objects.
-    return documents;
-  },
-});
+# Copy the three files
+cp [download-location]/schema.ts convex/schema.ts
+cp [download-location]/seedTeas.ts convex/seedTeas.ts
+cp [download-location]/teas.ts convex/teas.ts
 ```
 
-Using this query function in a React component looks like:
+### 2. Start Convex dev server
 
-```ts
-const data = useQuery(api.myFunctions.myQueryFunction, {
-  first: 10,
-  second: "hello",
-});
+```bash
+npm run dev
 ```
 
-A mutation function looks like:
+Wait for "Convex functions ready!" — the schema changes will auto-deploy.
 
-```ts
-// convex/myFunctions.ts
-import { mutation } from "./_generated/server";
-import { v } from "convex/values";
+### 3. Seed the database
 
-export const myMutationFunction = mutation({
-  // Validators for arguments.
-  args: {
-    first: v.string(),
-    second: v.string(),
-  },
+Open a **new terminal tab** (keep `npm run dev` running):
 
-  // Function implementation.
-  handler: async (ctx, args) => {
-    // Insert or modify documents in the database here.
-    // Mutations can also read from the database like queries.
-    // See https://docs.convex.dev/database/writing-data.
-    const message = { body: args.first, author: args.second };
-    const id = await ctx.db.insert("messages", message);
-
-    // Optionally, return a value from your mutation.
-    return await ctx.db.get("messages", id);
-  },
-});
+```bash
+npx convex run seedTeas:seed
 ```
 
-Using this mutation function in a React component looks like:
-
-```ts
-const mutation = useMutation(api.myFunctions.myMutationFunction);
-function handleButtonPress() {
-  // fire and forget, the most common way to use mutations
-  mutation({ first: "Hello!", second: "me" });
-  // OR
-  // use the result once the mutation has completed
-  mutation({ first: "Hello!", second: "me" }).then((result) =>
-    console.log(result),
-  );
-}
+You should see:
+```
+✅ Seeded 28 teas successfully!
 ```
 
-Use the Convex CLI to push your functions to a deployment. See everything
-the Convex CLI can do by running `npx convex -h` in your project root
-directory. To learn more, launch the docs with `npx convex docs`.
+### 4. Verify in Convex Dashboard
+
+Go to https://dashboard.convex.dev/d/blissful-ant-614 → Data → teas table.
+You should see 28 rows with all tea data and photo URLs.
+
+### 5. Use in your React frontend
+
+```tsx
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
+
+// List all teas
+const teas = useQuery(api.teas.list);
+
+// Get one tea by slug (for detail page)
+const tea = useQuery(api.teas.getBySlug, { slug: "long-jing" });
+
+// Filter by type
+const greenTeas = useQuery(api.teas.listByType, { type: "green" });
+
+// Search
+const results = useQuery(api.teas.search, { searchQuery: "dragon" });
+```
+
+## Safe to re-run
+
+The seed script clears existing teas first, so you can run it again anytime
+without getting duplicates.
+
+## What's next
+
+After seeding, you're ready for **Step 2: Build the tea browse page** in Cursor.
+You can use this prompt in Cursor:
+
+> Build a tea browse page at the root route. Use `useQuery(api.teas.list)` to
+> fetch all teas from Convex. Display them as a responsive card grid. Each card
+> shows the tea image (imageUrl), name, nameNative, type badge, origin region,
+> and caffeine level. Cards should link to `/tea/{slug}` for the detail page.
+> Use Tailwind CSS. Make it mobile-first and beautiful.

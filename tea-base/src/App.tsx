@@ -1,29 +1,23 @@
 "use client";
 
-import {
-  Authenticated,
-  Unauthenticated,
-  useConvexAuth,
-  useMutation,
-  useQuery,
-} from "convex/react";
+import { Authenticated, Unauthenticated, useConvexAuth } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
+import { Outlet } from "react-router-dom";
 
 export default function App() {
   return (
     <>
       <header className="sticky top-0 z-10 bg-light dark:bg-dark p-4 border-b-2 border-slate-200 dark:border-slate-800">
-        Convex + React + Convex Auth
+        Tea Base
         <SignOutButton />
       </header>
-      <main className="p-8 flex flex-col gap-16">
-        <h1 className="text-4xl font-bold text-center">
-          Convex + React + Convex Auth
-        </h1>
+      <main className="p-4 sm:p-6">
         <Authenticated>
-          <Content />
+          <div className="mx-auto flex max-w-5xl flex-col gap-8">
+            <Outlet />
+          </div>
         </Authenticated>
         <Unauthenticated>
           <SignInForm />
@@ -55,8 +49,15 @@ function SignInForm() {
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [error, setError] = useState<string | null>(null);
   return (
-    <div className="flex flex-col gap-8 w-96 mx-auto">
-      <p>Log in to see the numbers</p>
+    <div className="flex flex-col gap-8 w-full max-w-md mx-auto py-16">
+      <div className="space-y-2 text-center">
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Tea Base
+        </h1>
+        <p className="text-sm text-slate-500">
+          Log in to save your tastings, collections, and tea memories.
+        </p>
+      </div>
       <form
         className="flex flex-col gap-2"
         onSubmit={(e) => {
@@ -112,88 +113,97 @@ function SignInForm() {
 }
 
 function Content() {
-  const { viewer, numbers } =
-    useQuery(api.myFunctions.listNumbers, {
-      count: 10,
-    }) ?? {};
-  const addNumber = useMutation(api.myFunctions.addNumber);
+  // Core tea queries from Convex
+  const teas = useQuery(api.teas.list);
+  const featuredTea = useQuery(api.teas.getBySlug, { slug: "long-jing" });
+  const greenTeas = useQuery(api.teas.listByType, { type: "green" });
+  const searchResults = useQuery(api.teas.search, {
+    searchQuery: "dragon",
+  });
 
-  if (viewer === undefined || numbers === undefined) {
+  // While any of the queries are loading, Convex returns undefined
+  if (!teas || !featuredTea || !greenTeas || !searchResults) {
     return (
-      <div className="mx-auto">
-        <p>loading... (consider a loading skeleton)</p>
+      <div className="mx-auto text-center py-16">
+        <p className="text-lg">Steeping your teas…</p>
+        <p className="text-sm text-slate-500">
+          Fetching tea stories and tasting notes from the cloud.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-lg mx-auto">
-      <p>Welcome {viewer ?? "Anonymous"}!</p>
-      <p>
-        Click the button below and open this page in another window - this data
-        is persisted in the Convex cloud database!
-      </p>
-      <p>
-        <button
-          className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2"
-          onClick={() => {
-            void addNumber({ value: Math.floor(Math.random() * 10) });
-          }}
-        >
-          Add a random number
-        </button>
-      </p>
-      <p>
-        Numbers:{" "}
-        {numbers?.length === 0
-          ? "Click the button!"
-          : (numbers?.join(", ") ?? "...")}
-      </p>
-      <p>
-        Edit{" "}
-        <code className="text-sm font-bold font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded-md">
-          convex/myFunctions.ts
-        </code>{" "}
-        to change your backend
-      </p>
-      <p>
-        Edit{" "}
-        <code className="text-sm font-bold font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded-md">
-          src/App.tsx
-        </code>{" "}
-        to change your frontend
-      </p>
-      <div className="flex flex-col">
-        <p className="text-lg font-bold">Useful resources:</p>
-        <div className="flex gap-2">
-          <div className="flex flex-col gap-2 w-1/2">
-            <ResourceCard
-              title="Convex docs"
-              description="Read comprehensive documentation for all Convex features."
-              href="https://docs.convex.dev/home"
-            />
-            <ResourceCard
-              title="Stack articles"
-              description="Learn about best practices, use cases, and more from a growing
-            collection of articles, videos, and walkthroughs."
-              href="https://www.typescriptlang.org/docs/handbook/2/basic-types.html"
-            />
+    <div className="flex flex-col gap-12 max-w-4xl mx-auto">
+      <section className="space-y-2">
+        <h2 className="text-2xl font-semibold">All teas</h2>
+        <p className="text-sm text-slate-500">
+          Browse everything in your Tea Base collection.
+        </p>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          {teas.map((t) => (
+            <li
+              key={t._id}
+              className="rounded-lg border border-slate-200 dark:border-slate-800 p-3"
+            >
+              <div className="font-medium">{t.name}</div>
+              <div className="text-xs text-slate-500">
+                {t.origin.country} · {t.type}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-2xl font-semibold">Featured tea</h2>
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/60 dark:bg-amber-900/20">
+          <div className="text-lg font-semibold">{featuredTea.name}</div>
+          <div className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-200 mt-1">
+            {featuredTea.origin.country} · {featuredTea.type}
           </div>
-          <div className="flex flex-col gap-2 w-1/2">
-            <ResourceCard
-              title="Templates"
-              description="Browse our collection of templates to get started quickly."
-              href="https://www.convex.dev/templates"
-            />
-            <ResourceCard
-              title="Discord"
-              description="Join our developer community to ask questions, trade tips & tricks,
-            and show off your projects."
-              href="https://www.convex.dev/community"
-            />
-          </div>
+          <p className="mt-3 text-sm leading-relaxed">
+            {featuredTea.culturalContext}
+          </p>
         </div>
-      </div>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-2xl font-semibold">Green teas</h2>
+        <p className="text-sm text-slate-500">
+          Calm, focused energy and fresh, verdant profiles.
+        </p>
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {greenTeas.map((t) => (
+            <li
+              key={t._id}
+              className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-100"
+            >
+              {t.name}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-2xl font-semibold">Search: “dragon”</h2>
+        <p className="text-sm text-slate-500">
+          A tiny glimpse of how search will feel in Tea Base.
+        </p>
+        {searchResults.length === 0 ? (
+          <p className="text-sm text-slate-500 italic">
+            No teas found yet – try seeding your database.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-1">
+            {searchResults.map((t) => (
+              <li key={t._id} className="text-sm">
+                {t.name}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
